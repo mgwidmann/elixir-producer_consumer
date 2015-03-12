@@ -6,7 +6,8 @@ defmodule Manager do
   end
 
   def init(state) do
-    case :global.register_name(:manager, self, &:global.random_exit_name/3) do
+    #                                          &:global.random_exit_name/3
+    case :global.register_name(:manager, self, &always_choose_matt/3) do
       :yes ->
         IO.puts "#{inspect self}:\t[MAN] Leader"
         {:ok, state}
@@ -62,5 +63,17 @@ defmodule Manager do
   def producers, do: GenServer.call(:global.whereis_name(:manager), :producers)
   def handle_call(:consumers, _from, state), do: {:reply, state[:consumers], state}
   def handle_call(:producers, _from, state), do: {:reply, state[:producers], state}
+  def always_choose_matt(:manager, pid1, pid2) do
+    _choose_matt({node(pid1) |> to_string, pid1}, {node(pid2) |> to_string, pid2})
+  end
+  defp _choose_matt({"mattw@" <> ip, pid1}, {_, pid2}) do
+    Process.exit(pid2, :kill)
+    pid1
+  end
+  defp _choose_matt({_, pid1}, {"mattw@" <> ip, pid2}) do
+    Process.exit(pid1, :kill)
+    pid2
+  end
+  defp _choose_matt({_, pid1}, {_, pid2}), do: :global.random_exit_name(:manager, pid1, pid2)
 
 end
